@@ -21,18 +21,29 @@ extern OSStatus CGSNewConnection (const void** attr, CGSConnectionID* id);
 	CGSAddWindowFilter(_myConnection, [self windowNumber], __compositingFilter, 1);
 }
 
+- (void)enableBlurIfCorrectWindow:(BOOL)delay
+{
+	if([self isKindOfClass:NSClassFromString(@"TTWindow")] || [self isKindOfClass:NSClassFromString(@"VisorWindow")])
+	{
+
+		if (delay == TRUE) {
+			[self performSelector:@selector(enableBlur) withObject:nil afterDelay:0]; // FIXME
+		} else {
+			[self enableBlur];
+		}
+	}
+}
+
 - (id)Blurred_initWithContentRect:(NSRect)contentRect styleMask:(NSUInteger)windowStyle backing:(NSBackingStoreType)bufferingType defer:(BOOL)deferCreation
 {
 	if(self = [self Blurred_initWithContentRect:contentRect styleMask:windowStyle backing:bufferingType defer:deferCreation])
 	{
-		if([self isKindOfClass:NSClassFromString(@"TTWindow")] || [self isKindOfClass:NSClassFromString(@"VisorWindow")])
-		{
-			// The window has to be onscreen to get a windowNumber, so we run the enableBlur after the event loop
-			[self performSelector:@selector(enableBlur) withObject:nil afterDelay:0]; // FIXME
-		}
+		// The window has to be onscreen to get a windowNumber, so we run the enableBlur after the event loop
+		[self enableBlurIfCorrectWindow:TRUE];
 	}
 	return self;
 }
+
 @end
 
 @implementation Blurminal
@@ -42,5 +53,11 @@ extern OSStatus CGSNewConnection (const void** attr, CGSConnectionID* id);
 		[NSNumber numberWithFloat:1.0],@"Blurminal Radius",
 		nil]];
 	[[NSWindow class] jr_swizzleMethod:@selector(initWithContentRect:styleMask:backing:defer:) withMethod:@selector(Blurred_initWithContentRect:styleMask:backing:defer:) error:NULL];
+
+	for (id window in [NSApp orderedWindows]) {
+		[window enableBlurIfCorrectWindow:FALSE];
+	}
+
+
 }
 @end
