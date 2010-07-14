@@ -1,3 +1,5 @@
 build
 Blurminal.xcodeproj/*.mode1v3
+Blurminal.xcodeproj/*.perspectivev3
 Blurminal.xcodeproj/*.pbxuser
+.DS_Store
