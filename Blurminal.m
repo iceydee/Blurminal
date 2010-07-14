@@ -1,4 +1,5 @@
 #import "Blurminal.h"
+#import "CGSPrivate.h"
 #import "JRSwizzle.h"
 
 typedef void* CGSConnectionID;
