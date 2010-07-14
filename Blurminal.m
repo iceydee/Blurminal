@@ -2,47 +2,52 @@
 #import "CGSPrivate.h"
 #import "JRSwizzle.h"
 
-typedef void* CGSConnectionID;
-extern OSStatus CGSNewConnection (const void** attr, CGSConnectionID* id);
+extern OSStatus CGSNewConnection(const void **attr, CGSConnectionID *id);
 
 @implementation NSWindow (TTWindow)
 // Found here:
 // http://www.aeroxp.org/board/index.php?s=d18e98cabed9ce5ad27f9449b4e2298f&showtopic=8984&pid=116022&st=0&#entry116022
+- (void)enableBlurFilter
+{
+  CGSConnectionID cid;
+  CGSNewConnection(NULL, &cid);
+
+  CGSWindowFilterRef filter;
+  CGSNewCIFilterByName(cid, (CFStringRef)@"CIGaussianBlur", &filter);
+
+  NSNumber *blurRadius = [[NSUserDefaults standardUserDefaults]
+                          objectForKey:@"Blurminal Radius"];
+  NSDictionary* options = [NSDictionary dictionaryWithObject:blurRadius
+                                                      forKey:@"inputRadius"];
+  CGSSetCIFilterValuesFromDictionary(cid, filter, (CFDictionaryRef)options);
+
+  CGSAddWindowFilter(cid, [self windowNumber], filter, 1);
+}
+
 - (void)enableBlur
 {
-	CGSConnectionID _myConnection;
-	CGSNewConnection(NULL , &_myConnection);
-
-	uint32_t __compositingFilter = 0;
-	CGSNewCIFilterByName (_myConnection, (CFStringRef)@"CIGaussianBlur", &__compositingFilter);
-
-	NSDictionary* optionsDict = [NSDictionary dictionaryWithObject:[[NSUserDefaults standardUserDefaults] objectForKey:@"Blurminal Radius"] forKey:@"inputRadius"];
-	CGSSetCIFilterValuesFromDictionary(_myConnection, __compositingFilter, (CFDictionaryRef)optionsDict);
-
-	CGSAddWindowFilter(_myConnection, [self windowNumber], __compositingFilter, 1);
+  if([self isKindOfClass:NSClassFromString(@"TTWindow")] ||
+     [self isKindOfClass:NSClassFromString(@"VisorWindow")]) {
+    [self performSelector:@selector(enableBlurFilter)
+               withObject:nil
+               afterDelay:0];
+  }
 }
 
-- (void)enableBlurIfCorrectWindow:(BOOL)delay
+- (id)Blurred_initWithContentRect:(NSRect)contentRect
+                        styleMask:(NSUInteger)windowStyle
+                          backing:(NSBackingStoreType)bufferingType
+                            defer:(BOOL)deferCreation
 {
-	if([self isKindOfClass:NSClassFromString(@"TTWindow")] || [self isKindOfClass:NSClassFromString(@"VisorWindow")])
-	{
-
-		if (delay == TRUE) {
-			[self performSelector:@selector(enableBlur) withObject:nil afterDelay:0]; // FIXME
-		} else {
-			[self enableBlur];
-		}
-	}
-}
-
-- (id)Blurred_initWithContentRect:(NSRect)contentRect styleMask:(NSUInteger)windowStyle backing:(NSBackingStoreType)bufferingType defer:(BOOL)deferCreation
-{
-	if(self = [self Blurred_initWithContentRect:contentRect styleMask:windowStyle backing:bufferingType defer:deferCreation])
-	{
-		// The window has to be onscreen to get a windowNumber, so we run the enableBlur after the event loop
-		[self enableBlurIfCorrectWindow:TRUE];
-	}
-	return self;
+  if ((self = [self Blurred_initWithContentRect:contentRect
+                                      styleMask:windowStyle
+                                        backing:bufferingType
+                                          defer:deferCreation])) {
+    // The window has to be onscreen to get a windowNumber,
+    // so we run the enableBlur after the event loop.
+    [self enableBlur];
+  }
+  return self;
 }
 
 @end
@@ -50,15 +55,14 @@ extern OSStatus CGSNewConnection (const void** attr, CGSConnectionID* id);
 @implementation Blurminal
 + (void)load
 {
-	[[NSUserDefaults standardUserDefaults] registerDefaults:[NSDictionary dictionaryWithObjectsAndKeys:
-		[NSNumber numberWithFloat:1.0],@"Blurminal Radius",
-		nil]];
-	[[NSWindow class] jr_swizzleMethod:@selector(initWithContentRect:styleMask:backing:defer:) withMethod:@selector(Blurred_initWithContentRect:styleMask:backing:defer:) error:NULL];
-
-	for (id window in [NSApp orderedWindows]) {
-		[window enableBlurIfCorrectWindow:FALSE];
-	}
-
-
+  [[NSUserDefaults standardUserDefaults] registerDefaults:
+   [NSDictionary dictionaryWithObject:[NSNumber numberWithFloat:1.0]
+                               forKey:@"Blurminal Radius"]];
+  SEL old = @selector(initWithContentRect:styleMask:backing:defer:);
+  SEL new = @selector(Blurred_initWithContentRect:styleMask:backing:defer:);
+  [[NSWindow class] jr_swizzleMethod:old withMethod:new error:NULL];
+  for (id window in [NSApp orderedWindows]) {
+    [window enableBlur];
+  }
 }
 @end

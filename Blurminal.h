@@ -1,6 +1,4 @@
 #import <Cocoa/Cocoa.h>
 
-@interface Blurminal : NSObject {
-
-}
+@interface Blurminal : NSObject {}
 @end
