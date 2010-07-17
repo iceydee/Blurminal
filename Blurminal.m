@@ -21,7 +21,7 @@ extern OSStatus CGSNewConnection(const void **attr, CGSConnectionID *id);
                                                       forKey:@"inputRadius"];
   CGSSetCIFilterValuesFromDictionary(cid, filter, (CFDictionaryRef)options);
 
-  CGSAddWindowFilter(cid, [self windowNumber], filter, 1);
+  CGSAddWindowFilter(cid, [self windowNumber], filter, 0x3001);
 }
 
 - (void)enableBlur
